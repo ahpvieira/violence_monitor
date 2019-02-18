@@ -1,0 +1,4 @@
+.content-wrapper,
+.right-side {
+  background-color: #A9A9A9;
+}
