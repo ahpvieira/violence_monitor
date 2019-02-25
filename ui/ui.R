@@ -32,7 +32,8 @@ library(shinyjs)
 # setwd("D:/Users/B31099033/Documents/violencia")
 # mcz <- readOGR(dsn = ".", layer = "shp", stringsAsFactors = FALSE)
 # df <- readRDS("C:/Users/ahpvi/Documents/shiny/violencia/tb-cvli-al-2017.rds")
-load("C:/Users/ahpvi/Documents/shiny/violence_monitor/data/labels.Rdata")
+# load("C:/Users/ahpvi/Documents/shiny/violence_monitor/data/labels.Rdata")
+load("./data/labels.Rdata")
 
 ## Modifica dados -------------------------
 
@@ -82,13 +83,47 @@ includeMarkdown <- function (path)
 ## Shiny UI -------------------------------
 
 header <- dashboardHeader(
-      title = ""
+      title = "Monitor do Crime"
 )
 
-sidebar <- dashboardSidebar(disable = TRUE)
+sidebar <- dashboardSidebar(width = 250,
+      selectizeInput("filter_bairro", "Bairro", 
+                                              choices = c("", bairros), 
+                                              width = "100%", 
+                                              options = list(placeholder = "Selecione um bairro")),
+      selectizeInput("filter_sexo", "Sexo", 
+                     choices = c("", sexo), 
+                     width = "100%", 
+                     options = list(placeholder = "Selecione um sexo")),
+      selectizeInput("filter_idade", "Idade", 
+                     choices = c("", faixa_idade[c(7, 2, 3, 1, 4, 6, 5)]), 
+                     width = "100%", 
+                     options = list(placeholder = "Selecione uma faixa etária")),
+      selectizeInput("filter_morte", "Tipo de morte", 
+                     choices = c("", tipo_morte), 
+                     width = "100%", 
+                     options = list(placeholder = "Selecione um tipo de morte")),
+      # column(width = 3, uiOutput("filter_idade")),
+      # column(width = 3, uiOutput("filter_morte"))
+      # HTML('<hr style="color: white;">')
+      selectizeInput("filter_crime", 
+                     "Tipo de crime", 
+                     choices = c("", tipo_crime), 
+                     width = "100%", 
+                     options = list(placeholder = "Selecione um tipo de crime")),
+      radioButtons("filter_indicador", 
+                   "Indicador (em construção)",
+                   choices = c("Número total", "Taxa por 10 mil habitantes"), 
+                   # inline = T, 
+                   width = "100%"),
+      actionButton("reset_input", "Limpar filtro", 
+                   width = "50%", 
+                   style = "color: #fff; background-color: #666; border-color: black")
+)
 
 body <- dashboardBody(
-      includeCSS("C:/Users/ahpvi/Documents/shiny/violence_monitor/www/custom.css"),
+      # includeCSS("C:/Users/ahpvi/Documents/shiny/violence_monitor/www/custom.css"),
+      includeCSS("./www/custom.css"),
       useShinyjs(),
       tags$head(tags$style(
             HTML('
@@ -99,71 +134,25 @@ body <- dashboardBody(
       title = " ", #footer=source("intro_foot.R", local=TRUE)$value, 
       windowTitle = "Monitor do crime", collapsible = TRUE, fluid = FALSE,
       id = "page",
-      
       tabPanel(
             title = "Home",
             id = "app_home",
-            fluidRow(
-                  column(width = 8, 
-                         includeMarkdown("C:/Users/ahpvi/Documents/shiny/violence_monitor/intro_app.md"))
-            ),
-            tags$hr(color = "white"),
-            div(
-                  id = "form",
-                  tagList(
-                        fluidRow(
-                              column(width = 3, 
-                                     selectizeInput("filter_bairro", "Bairro", 
-                                                    choices = c("", bairros), 
-                                                    width = "100%", 
-                                                    options = list(placeholder = "Selecione um bairro"))),
-                              # column(width = 3, uiOutput("filter_sexo")),
-                              column(width = 3, 
-                                     selectizeInput("filter_sexo", "Sexo", 
-                                                    choices = c("", sexo), 
-                                                    width = "100%", 
-                                                    options = list(placeholder = "Selecione um sexo"))),
-                              column(width = 3, 
-                                     selectizeInput("filter_idade", "Idade", 
-                                                    choices = c("", faixa_idade), 
-                                                    width = "100%", 
-                                                    options = list(placeholder = "Selecione uma faixa etária"))),
-                              column(width = 3, 
-                                     selectizeInput("filter_morte", "Tipo de morte", 
-                                                    choices = c("", tipo_morte), 
-                                                    width = "100%", 
-                                                    options = list(placeholder = "Selecione um tipo de morte")))
-                              # column(width = 3, uiOutput("filter_idade")),
-                              # column(width = 3, uiOutput("filter_morte"))
-                              # HTML('<hr style="color: white;">')
-                        ),
-                        fluidRow(
-                              # column(width = 3, uiOutput("filter_crime")),
-                              column(width = 3, 
-                                     selectizeInput("filter_crime", 
-                                                    "Tipo de crime", 
-                                                    choices = c("", tipo_crime), 
-                                                    width = "100%", 
-                                                    options = list(placeholder = "Selecione um tipo de crime"))),
-                              column(width = 3, 
-                                     radioButtons("filter_indicador", 
-                                                  "Indicador (em construção)",
-                                                  choices = c("Quantidade", "Taxa por 10 mil habitantes"), 
-                                                  inline = T, width = "100%"))
-                              # HTML('<hr style="color: white;">')
-                        )
-                        ),
-            fluidRow(
-                  # uiOutput('resetable_input'),
-                  column(width = 3, 
-                         actionButton("reset_input", "Limpar filtro", 
-                                      width = "50%", 
-                                      style = "color: #fff; background-color: #666; border-color: black")
-                         )
-            )),
+            # fluidRow(
+            #       column(width = 8, 
+            #              includeMarkdown("./intro_app.md"))
+            # ),
+            # tags$hr(color = "white"),
             br(),
-            leafletOutput("mapa_mcz", height = 600),
-            br(),
+            fluidRow(
+                  column(width = 12,
+                         shinydashboard::box(title = "Mapa de crimes violentos intencionais em bairros de Maceió",
+                                             width = NULL, 
+                                             solidHeader = TRUE,
+                                             # background = "black",
+                                             status = "danger",
+                                             collapsible = TRUE,
+                                             leafletOutput("mapa_mcz", height = 600, width = "100%")
+                         ))),
             br(),
             fluidRow(
                   column(width = 12,
@@ -194,7 +183,7 @@ body <- dashboardBody(
             br(),
             fluidRow(
                   column(width = 8, 
-                         includeMarkdown("C:/Users/ahpvi/Documents/shiny/violence_monitor/credit_app.md"))
+                         includeMarkdown("./credit_app.md"))
             )
       )
 )

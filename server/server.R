@@ -37,9 +37,9 @@ library(reshape2)
 server <- shinyServer(function(input, output, session) {
       
       # Carrega dados
-      mcz <- readOGR(dsn = "C:/Users/ahpvi/Documents/shiny/violence_monitor/data", 
+      mcz <- readOGR(dsn = "./data", 
                      layer = "shp", stringsAsFactors = FALSE)
-      df <- readRDS("C:/Users/ahpvi/Documents/shiny/violence_monitor/data/tb-cvli-al-2017.rds")
+      df <- readRDS("./data/tb-cvli-al-2017.rds")
       
       # Modifica dados
       df <- dplyr::mutate(df, sexo = ifelse(is.na(sexo), "Sem informação", sexo))
@@ -52,10 +52,10 @@ server <- shinyServer(function(input, output, session) {
                           mes_ano = as.yearmon(str_sub(data_fato, 1, 7)))
       
       tb_stats <- df %>% 
-            filter(cidade == "Maceió") %>% 
+            # filter(cidade == "Maceió") %>% 
             # dplyr::mutate(bairro = iconv(bairro, "latin1", "latin1")) %>% 
             dplyr::mutate(bairro = iconv(bairro, "latin1", "ASCII//TRANSLIT")) %>%
-            group_by(bairro) %>% 
+            dplyr::group_by(bairro) %>% 
             dplyr::mutate(n_cvli_total = n()) %>% 
             ungroup %>% 
             dplyr::group_by(bairro, sexo) %>% 
@@ -73,6 +73,8 @@ server <- shinyServer(function(input, output, session) {
             dplyr::select(bairro, sexo, faixa_idade, tipo_crime = subjetividade_complementar,
                           tipo_morte, n_cvli_total, n_cvli_sexo, n_cvli_idade, 
                           n_cvli_crime, n_cvli_morte) %>% 
+            # select(bairro, n_cvli_total) %>%
+            # data.frame
             melt(id.vars = c("bairro", "sexo", "faixa_idade", "n_cvli_total",
                              "tipo_crime", "tipo_morte")) %>%
             # dplyr::mutate(total = ifelse(variable == "n_cvli_total", "Total", NA)) %>% 
@@ -80,22 +82,23 @@ server <- shinyServer(function(input, output, session) {
             dplyr::rename(n = value) %>%
             melt(id.vars = c("bairro", "n")) %>%
             dplyr::select(bairro, value, n) %>% 
-            dplyr::mutate(value = case_when(value %in% c("1", "2", "3", "4", "5", "6", "8", "11", 
-                                "14", "17", "19", "20", "25", "30") ~ "Total",
+            dplyr::mutate(value = case_when(value %in% c("1", "2", "3", "4", "5", "6", "7", "8", 
+                                                         "10", "11", "13", "16", "18", 
+                                                         "19", "21", "23", "28", "337", "372",
+                                                         "38", "42", "47", "62", "67") ~ "Total",
                                 TRUE ~ as.character(value)))
-      
-      # tb_stats %>% 
-      #       filter(value == "Total") %>% 
-      #       distinct(bairro, .keep_all = T) %>% 
-      #       arrange(bairro)
       
       df_mapa_sexo <- reactive({
             
             if (input$filter_sexo == ""){
                   # return(mcz@data %>% dplyr::filter(value == "Total") %>% dplyr::filter(!duplicated(Bairro)))
                   return(
-                        distinct(filter(tb_stats, value == "Total"),
-                                 bairro, .keep_all = T)
+                        
+                        # distinct(filter(tb_stats, value == "Total"),
+                        #          bairro, .keep_all = T)
+                        
+                        tb_stats
+                        
                         )
                         }
             else if (!input$filter_sexo == ""){
@@ -133,9 +136,26 @@ server <- shinyServer(function(input, output, session) {
             
       })
       
+      df_mapa_total <- reactive({
+            if(input$filter_sexo == "" & input$filter_idade == "" &
+                  input$filter_morte == "" & input$filter_crime == ""){
+                  
+                  
+                  return(
+                        distinct(filter(tb_stats, value == "Total"),
+                                 bairro, .keep_all = T)
+                  )
+            }
+                  
+                  
+
+
+
+      })
+      
       mcz@data <- mcz@data %>% 
             clean_names %>% 
-            rename(pop_total = popula_a_a) %>%
+            rename(pop_total = populaã_ã) %>%
             mutate(pop_total = as.numeric(pop_total)) %>% 
             # dplyr::mutate(bairro = iconv(bairro, "UTF-8", "latin1")) %>% 
             dplyr::mutate(bairro = iconv(bairro, "UTF-8", "ASCII//TRANSLIT")) %>% 
@@ -212,25 +232,21 @@ server <- shinyServer(function(input, output, session) {
             
             tb_legend <- mcz@data %>%
                   left_join(tb_stats) %>% 
-                  filter(value == "Total") %>% 
-                  # dplyr::mutate(n = ifelse(is.na(n), 0, n)) %>% 
+                  filter(value == "Total") %>%
+                  # filter(value == "Feminino") %>% 
+                  # dplyr::mutate(n = ifelse(is.na(n), 0, n)) %>%
                   distinct(bairro, .keep_all = T)
-            
-            # bins <- c(1, 2, 3, 5, 11, 30)
+                  
+           # bins <- c(1, 2, 3, 5, 11, 30)
             # pall <- colorBin("YlOrRd", domain = mcz@data$n_cvli, bins = bins)
-            pall <- colorBin("YlOrRd", domain = tb_legend$n, 
-                             bins = c(0, 2, 3, 5, 11, 30))
+            pall <- colorBin("YlOrRd", domain = tb_legend$n,
+                             bins = c(0, 2, 3, 5, 11, 30, 70))
             
-            # labels <- sprintf(
-            #       "<b>Bairro:</b> %s <br> 
-            #                 <b>População:</b> %s <br>
-            #                 <b>Ocorrências:</b> %g",
-            #       pull(distinct(select(mcz@data, bairro))), 
-            #       mcz@data$pop_total,
-            #       mcz@data$n) %>% lapply(htmltools::HTML)      
+            # pall <- colorQuantile("YlOrRd", domain = tb_legend$n, n = 5)
+            
+            # cut(tb_legend$n, breaks = c(quantile(tb_legend$n, probs = seq(0, 1, by = 0.10))))
             
             leaflet::leaflet(options = leafletOptions(minZoom = 12, maxZoom = 18)) %>% 
-                  # leaflet::leaflet(data = mcz) %>% 
                   setView(lng = -35.74, lat = -9.62, zoom = 12) %>% 
                   addTiles(layerId = "darkmatter",
                            options = providerTileOptions(minZoom = 12, maxZoom = 15)) %>% 
@@ -264,14 +280,12 @@ server <- shinyServer(function(input, output, session) {
                   #             ) %>% 
                   leaflet::addLegend(
                         pal = pall, 
-                        values = c("0-2", "2-3", "3-5", "5-11", "11-30"), 
+                        values = c("0-2", "2-3", "3-5", "5-11", "11-30", "11-70"), 
                         opacity = 0.7,
                         title = "Número de <br> ocorrências (2017)",
                         position = "bottomright")
             
-            # return(mapa)
-            
-      })
+            })
       
       observe({ 
             
@@ -290,7 +304,7 @@ server <- shinyServer(function(input, output, session) {
                   
                   mcz@data <- mcz@data %>%
                         # mutate(bairro = iconv(bairro, from = "UTF-8", to = "latin1")) %>%
-                        dplyr::left_join(df_mapa_final()) %>%
+                        dplyr::left_join(df_mapa_total()) %>%
                         mutate(n = ifelse(is.na(n), 0, n))
                         # distinct(bairro, .keep_all = T) %>% 
                         # filter(!is.na(value))
@@ -301,9 +315,13 @@ server <- shinyServer(function(input, output, session) {
                         #                                breaks = c(quantile(n, probs = seq(0, 1, by = .2), na.rm = T)),
                         #                                labels = c("0-2", "2-3", "3-5", "5-11", "11-30"), include.lowest = T))
 
-                  pall <- colorBin("YlOrRd", domain = mcz@data$n, 
-                                   # bins = c(0, 2, 3, 5, 11, 30),
-                                   bins = 5)
+                  # pall <- colorBin("YlOrRd", domain = mcz@data$n, 
+                  #                  bins = c(0, 2, 3, 5, 11, 30)
+                  #                  # bins = 5
+                  #                  )
+                  
+                  pall <- colorBin("YlOrRd", domain = mcz@data$n,
+                                   bins = c(0, 2, 3, 5, 11, 30, 70))
                   
                   labels <- sprintf(
                         "<b>Bairro:</b> %s <br>
@@ -366,25 +384,34 @@ server <- shinyServer(function(input, output, session) {
                         distinct(bairro, .keep_all = T)
                   
                   mcz@data <- mcz@data %>% 
-                        # mutate(bairro = iconv(bairro, from = "UTF-8", to = "latin1")) %>% 
-                        dplyr::inner_join(df_mapa_final()) %>%
+                        dplyr::left_join(df_mapa_final()) %>%
                         # dplyr::inner_join(filter(tb_stats, value == "Paf")) %>%
-                        dplyr::mutate(n = ifelse(is.na(n), 0, n))
-                        # distinct(bairro, .keep_all = T) %>% 
+                        dplyr::mutate(n = ifelse(is.na(n), 0, n)) %>% 
+                        distinct(bairro, .keep_all = T)
                         # filter(!is.na(value))
+                        # distinct(bairro, .keep_all = T) %>%
+                        # filter(!is.na(value)) %>%
                         # mutate(faixa_cvli = cut(n,
                         #                         breaks = c(quantile(n, probs = seq(0, 1, by = .2), na.rm = T)),
                         #                         labels = c("1-2", "2-3", "3-5", "5-11", "11-30")))
             
+                  
+                  # mcz@data %>%
+                  #       dplyr::left_join(filter(tb_stats, value == "Total")) %>%
+                  #       dplyr::mutate(n = ifelse(is.na(n), 0, n)) %>%
+                  #       # filter(!is.na(value)) %>%
+                  #       distinct(bairro, .keep_all = T) %>%
+                  #       arrange(value)
+                  #       
+                  
                   # bins <- c(1, 2, 3, 5, 11, 30)
                   # pall <- colorBin("YlOrRd", domain = mcz@data$n_cvli, bins = bins)
                   # pall <- colorBin("YlOrRd", domain = tb_legend$n, 
                   #                  # bins = c(0, 2, 3, 5, 11, 30),
                   #                  bins = 5)
                   
-                  pall <- colorBin("YlOrRd", domain = mcz@data$n, 
-                                   # bins = c(0, 2, 3, 5, 11, 30),
-                                   bins = 5)
+                  pall <- colorBin("YlOrRd", domain = mcz@data$n,
+                                   bins = c(0, 2, 3, 5, 11, 30, 70))
                   
                   labels <- sprintf(
                         "<b>Bairro:</b> %s <br>
