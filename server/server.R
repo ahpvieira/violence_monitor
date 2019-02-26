@@ -49,109 +49,165 @@ server <- shinyServer(function(input, output, session) {
                           data_fato = na.locf(data_fato),
                           mes_fato = str_sub(data_fato, 4, 5),
                           data_fato = as.Date(data_fato, "%d/%m/%Y"),
-                          mes_ano = as.yearmon(str_sub(data_fato, 1, 7)))
+                          mes_ano = as.yearmon(str_sub(data_fato, 1, 7))) %>% 
+            dplyr::select(bairro, sexo, faixa_idade, tipo_crime = subjetividade_complementar, 
+                          tipo_morte, mes_fato, data_fato) %>% 
+            dplyr::mutate(bairro = iconv(bairro, "UTF-8", "ASCII//TRANSLIT"),
+                          bairro = ifelse(bairro == "Centro", "Centro Maceio", bairro))
       
-      tb_stats <- df %>% 
-            # filter(cidade == "Maceió") %>% 
-            # dplyr::mutate(bairro = iconv(bairro, "latin1", "latin1")) %>% 
-            dplyr::mutate(bairro = iconv(bairro, "latin1", "ASCII//TRANSLIT")) %>%
-            dplyr::group_by(bairro) %>% 
-            dplyr::mutate(n_cvli_total = n()) %>% 
-            ungroup %>% 
-            dplyr::group_by(bairro, sexo) %>% 
-            dplyr::mutate(n_cvli_sexo = n()) %>% 
-            ungroup %>% 
-            dplyr::group_by(bairro, faixa_idade) %>% 
-            dplyr::mutate(n_cvli_idade = n()) %>% 
-            ungroup %>% 
-            dplyr::group_by(bairro, subjetividade_complementar) %>% 
-            dplyr::mutate(n_cvli_crime = n()) %>% 
-            ungroup %>% 
-            dplyr::group_by(bairro, tipo_morte) %>% 
-            dplyr::mutate(n_cvli_morte = n()) %>% 
-            ungroup %>% 
-            dplyr::select(bairro, sexo, faixa_idade, tipo_crime = subjetividade_complementar,
-                          tipo_morte, n_cvli_total, n_cvli_sexo, n_cvli_idade, 
-                          n_cvli_crime, n_cvli_morte) %>% 
-            # select(bairro, n_cvli_total) %>%
-            # data.frame
-            melt(id.vars = c("bairro", "sexo", "faixa_idade", "n_cvli_total",
-                             "tipo_crime", "tipo_morte")) %>%
-            # dplyr::mutate(total = ifelse(variable == "n_cvli_total", "Total", NA)) %>% 
-            dplyr::select(-variable) %>%
-            dplyr::rename(n = value) %>%
-            melt(id.vars = c("bairro", "n")) %>%
-            dplyr::select(bairro, value, n) %>% 
-            dplyr::mutate(value = case_when(value %in% c("1", "2", "3", "4", "5", "6", "7", "8", 
-                                                         "10", "11", "13", "16", "18", 
-                                                         "19", "21", "23", "28", "337", "372",
-                                                         "38", "42", "47", "62", "67") ~ "Total",
-                                TRUE ~ as.character(value)))
+      # tb1 <- df %>% 
+      #       tbl_df %>% 
+      #       # filter(cidade == "Maceió") %>% 
+      #       # dplyr::mutate(bairro = iconv(bairro, "latin1", "latin1")) %>% 
+      #       dplyr::mutate(bairro = iconv(bairro, "UTF-8", "ASCII//TRANSLIT"),
+      #                     bairro = ifelse(bairro == "Centro", "Centro Maceio", bairro)) %>% 
+      #       dplyr::select(bairro, sexo, faixa_idade, subjetividade_complementar, tipo_morte) %>% 
+      #       melt(id.vars = c("bairro")) %>% 
+      #       tbl_df %>% 
+      #       dplyr::group_by(bairro, value) %>% 
+      #       dplyr::mutate(n = n()) %>% 
+      #       ungroup %>% 
+      #       dplyr::select(bairro, value, n)
+      # 
+      # tb2 <- df %>% 
+      #       tbl_df %>% 
+      #       # filter(cidade == "Maceió") %>% 
+      #       # dplyr::mutate(bairro = iconv(bairro, "latin1", "latin1")) %>% 
+      #       dplyr::mutate(bairro = iconv(bairro, "UTF-8", "ASCII//TRANSLIT"),
+      #                     bairro = ifelse(bairro == "Centro", "Centro Maceio", bairro)) %>% 
+      #       dplyr::group_by(bairro) %>% 
+      #       dplyr::summarize(n = n()) %>% 
+      #       dplyr::mutate(value = "Total") %>% 
+      #       dplyr::select(bairro, value, n)
+      #       
+      # tb_stats <- tb1 %>% rbind(tb2)
+      
+     # tb_stats <- df %>% 
+     #        tbl_df %>% 
+     #        # filter(cidade == "Maceió") %>% 
+     #        # dplyr::mutate(bairro = iconv(bairro, "latin1", "latin1")) %>% 
+     #        dplyr::mutate(bairro = iconv(bairro, "latin1", "ASCII//TRANSLIT"),
+     #                      bairro = ifelse(bairro == "Centro", "Centro Maceio", bairro)) %>%
+     #        dplyr::group_by(bairro) %>% 
+     #        dplyr::mutate(n_cvli_total = n()) %>% 
+     #        ungroup %>% 
+     #        dplyr::group_by(bairro, sexo) %>% 
+     #        dplyr::mutate(n_cvli_sexo = n()) %>% 
+     #        ungroup %>% 
+     #        dplyr::group_by(bairro, faixa_idade) %>% 
+     #        dplyr::mutate(n_cvli_idade = n()) %>% 
+     #        ungroup %>% 
+     #        dplyr::group_by(bairro, subjetividade_complementar) %>% 
+     #        dplyr::mutate(n_cvli_crime = n()) %>% 
+     #        ungroup %>% 
+     #        dplyr::group_by(bairro, tipo_morte) %>% 
+     #        dplyr::mutate(n_cvli_morte = n()) %>% 
+     #        ungroup %>% 
+     #        dplyr::select(bairro, sexo, faixa_idade, tipo_crime = subjetividade_complementar,
+     #                      tipo_morte, n_cvli_total, n_cvli_sexo, n_cvli_idade, 
+     #                      n_cvli_crime, n_cvli_morte) %>% 
+     #        # select(bairro, n_cvli_total) %>%
+     #        # data.frame
+     #        melt(id.vars = c("bairro", "sexo", "faixa_idade", "n_cvli_total",
+     #                         "tipo_crime", "tipo_morte")) %>%
+     #        tbl_df %>% 
+     #        # dplyr::mutate(total = ifelse(variable == "n_cvli_total", "Total", NA)) %>% 
+     #        dplyr::select(-variable) %>%
+     #        dplyr::rename(n = value) %>%
+     #        melt(id.vars = c("bairro", "n")) %>%
+     #        tbl_df %>% 
+     #        dplyr::select(bairro, value, n) %>% 
+     #        dplyr::mutate(value = case_when(value %in% c("1", "2", "3", "4", "5", "6", "7", "8", 
+     #                                                     "10", "11", "13", "16", "18", 
+     #                                                     "19", "21", "23", "28", "337", "372",
+     #                                                     "38", "42", "47", "62", "67") ~ "Total",
+     #                            TRUE ~ as.character(value)))
       
       df_mapa_sexo <- reactive({
             
-            if (input$filter_sexo == ""){
+            if (is.null(input$filter_sexo)){
                   # return(mcz@data %>% dplyr::filter(value == "Total") %>% dplyr::filter(!duplicated(Bairro)))
                   return(
                         
                         # distinct(filter(tb_stats, value == "Total"),
                         #          bairro, .keep_all = T)
                         
-                        tb_stats
+                        # tb_stats
+                        df
                         
                         )
                         }
             else if (!input$filter_sexo == ""){
-                  filter(tb_stats, value == input$filter_sexo)
+
+                  # dplyr::filter(tb_stats, value == input$filter_sexo)
+                  
+                  dplyr::filter(df, sexo %in% input$filter_sexo)
+                  
                   }
             
       })
       
       df_mapa_idade <- reactive({
-            if (input$filter_idade == ""){
+            if (is.null(input$filter_idade)){
                   return(df_mapa_sexo())
-            }
+                  }
             else if (!input$filter_idade == ""){
                   # df_mapa_sexo() %>% dplyr::filter(value == input$filter_idade)
-                  filter(df_mapa_sexo(), value == input$filter_idade)
+                  # dplyr::filter(df_mapa_sexo(), value %in% input$filter_idade)
+                  dplyr::filter(df_mapa_sexo(), faixa_idade %in% input$filter_idade)
+                  
                   }
             
       })
       
       df_mapa_morte <- reactive({
-            if (input$filter_morte == ""){
+            if (is.null(input$filter_morte)){
                   return(df_mapa_idade())
             }
             else if (!input$filter_morte == ""){
-                  dplyr::filter(df_mapa_idade(), value == input$filter_morte)}
+                  # dplyr::filter(df_mapa_idade(), value == input$filter_morte)
+                  dplyr::filter(df_mapa_idade(), tipo_morte == input$filter_morte)
+                  }
             
       })
       
       df_mapa_final <- reactive({
-            if (input$filter_crime == ""){
-                  return(df_mapa_morte())
+            if (is.null(input$filter_crime)){
+                  return(
+                        df_mapa_morte() %>% 
+                              group_by(bairro) %>% 
+                              summarize(n = n())
+                         
+                         
+                         )
             }
             else if (!input$filter_crime == ""){
-                  dplyr::filter(df_mapa_morte(), value == input$filter_crime)}
+                  # dplyr::filter(df_mapa_morte(), value == input$filter_crime)
+                  df_mapa_morte() %>% 
+                        dplyr::filter(tipo_crime == input$filter_crime) %>% 
+                        group_by(bairro) %>% 
+                        summarize(n = n())
+                  }
             
       })
       
       df_mapa_total <- reactive({
-            if(input$filter_sexo == "" & input$filter_idade == "" &
-                  input$filter_morte == "" & input$filter_crime == ""){
+            if(is.null(input$filter_sexo) & is.null(input$filter_idade) &
+               is.null(input$filter_morte) & is.null(input$filter_crime)){
                   
                   
                   return(
-                        distinct(filter(tb_stats, value == "Total"),
-                                 bairro, .keep_all = T)
+                        # dplyr::distinct(dplyr::filter(tb_stats, value == "Total"),
+                        #          bairro, .keep_all = T)
+                        df %>% 
+                              # dplyr::distinct(bairro, .keep_all = T) %>% 
+                              dplyr::group_by(bairro) %>% 
+                              dplyr::summarize(n = n())
+                        
                   )
             }
                   
-                  
-
-
-
-      })
+                  })
       
       mcz@data <- mcz@data %>% 
             clean_names %>% 
@@ -181,43 +237,43 @@ server <- shinyServer(function(input, output, session) {
                   return(df)
             
             else if (!input$filter_bairro == "") {
-                  return(df %>% filter(bairro == input$filter_bairro))
+                  return(df %>% filter(bairro %in% input$filter_bairro))
             }
       })
       
       df_sexo <- reactive({
-            if (input$filter_sexo == ""){
+            if (is.null(input$filter_sexo)){
                   return(df_bairro())
             }
             else if (!input$filter_sexo == ""){
-                  df_bairro() %>% filter(sexo == input$filter_sexo)}
+                  df_bairro() %>% filter(sexo %in% input$filter_sexo)}
             
       })
       
       df_idade <- reactive({
-            if (input$filter_idade == ""){
+            if (is.null(input$filter_idade)){
                   return(df_sexo())
             }
             else if (!input$filter_idade == ""){
-                  df_sexo() %>% filter(faixa_idade == input$filter_idade)}
+                  df_sexo() %>% filter(faixa_idade %in% input$filter_idade)}
             
       })
       
       df_morte <- reactive({
-            if (input$filter_morte == ""){
+            if (is.null(input$filter_morte)){
                   return(df_idade())
             }
             else if (!input$filter_morte == ""){
-                  df_idade() %>% filter(tipo_morte == input$filter_morte)}
+                  df_idade() %>% filter(tipo_morte %in% input$filter_morte)}
             
       })
       
       df_reactive <- reactive({
-            if (input$filter_crime == ""){
+            if (is.null(input$filter_crime)){
                   return(df_morte())
             }
             else if (!input$filter_crime == ""){
-                  df_morte() %>% filter(subjetividade_complementar == input$filter_crime)}
+                  df_morte() %>% filter(tipo_crime %in% input$filter_crime)}
             
       })
       
@@ -225,22 +281,23 @@ server <- shinyServer(function(input, output, session) {
             reset("form")
       })
       
-      # cbind(mcz@data$Bairro, coordinates(mcz))
-      
       # Mapa
       output$mapa_mcz <- renderLeaflet({ 
             
             tb_legend <- mcz@data %>%
-                  left_join(tb_stats) %>% 
-                  filter(value == "Total") %>%
+                  # left_join(tb_stats) %>% 
+                  left_join(df) %>% 
+                  dplyr::group_by(bairro) %>% 
+                  dplyr::summarize(n = n())
+                  # filter(value == "Total") %>%
                   # filter(value == "Feminino") %>% 
                   # dplyr::mutate(n = ifelse(is.na(n), 0, n)) %>%
-                  distinct(bairro, .keep_all = T)
+                  # distinct(bairro, .keep_all = T)
                   
            # bins <- c(1, 2, 3, 5, 11, 30)
             # pall <- colorBin("YlOrRd", domain = mcz@data$n_cvli, bins = bins)
             pall <- colorBin("YlOrRd", domain = tb_legend$n,
-                             bins = c(0, 2, 3, 5, 11, 30, 70))
+                             bins = c(0, 2, 3, 5, 11, 30, 340))
             
             # pall <- colorQuantile("YlOrRd", domain = tb_legend$n, n = 5)
             
@@ -280,7 +337,7 @@ server <- shinyServer(function(input, output, session) {
                   #             ) %>% 
                   leaflet::addLegend(
                         pal = pall, 
-                        values = c("0-2", "2-3", "3-5", "5-11", "11-30", "11-70"), 
+                        values = c("0-2", "2-3", "3-5", "5-11", "11-30", "30 ou mais"), 
                         opacity = 0.7,
                         title = "Número de <br> ocorrências (2017)",
                         position = "bottomright")
@@ -289,15 +346,15 @@ server <- shinyServer(function(input, output, session) {
       
       observe({ 
             
-            if (input$filter_sexo == "" & input$filter_idade == "" &
-                input$filter_morte == "" & input$filter_crime == ""
+            if (is.null(input$filter_sexo) & is.null(input$filter_idade) &
+                is.null(input$filter_morte) & is.null(input$filter_crime)
             ){
                 
-                  tb_legend <- mcz@data %>%
-                        left_join(tb_stats) %>% 
-                        filter(value == "Total") %>% 
-                        # dplyr::mutate(n = ifelse(is.na(n), 0, n)) %>% 
-                        distinct(bairro, .keep_all = T)
+                  # tb_legend <- mcz@data %>%
+                  #       left_join(tb_stats) %>% 
+                  #       filter(value == "Total") %>% 
+                  #       # dplyr::mutate(n = ifelse(is.na(n), 0, n)) %>% 
+                  #       distinct(bairro, .keep_all = T)
                   
                   # bins <- c(1, 2, 3, 5, 11, 30)
                   # pall <- colorBin("YlOrRd", domain = mcz@data$n_cvli, bins = bins)
@@ -321,7 +378,7 @@ server <- shinyServer(function(input, output, session) {
                   #                  )
                   
                   pall <- colorBin("YlOrRd", domain = mcz@data$n,
-                                   bins = c(0, 2, 3, 5, 11, 30, 70))
+                                   bins = c(0, 2, 3, 5, 11, 30, 340))
                   
                   labels <- sprintf(
                         "<b>Bairro:</b> %s <br>
@@ -341,6 +398,7 @@ server <- shinyServer(function(input, output, session) {
                                          options = providerTileOptions(minZoom = 12, maxZoom = 15)) %>% 
                         # addTiles() %>% 
                         clearShapes() %>% 
+                        # clearMarkers() %>% 
                         # addPolygons(data = mcz, 
                         #             fillColor = ~pal(sum_suicides), 
                         #             fillOpacity = 0.7, 
@@ -373,15 +431,15 @@ server <- shinyServer(function(input, output, session) {
                   
             }
             
-            if (!input$filter_sexo == "" | !input$filter_idade == "" |
-                !input$filter_morte == "" | !input$filter_crime == ""
+            if (!is.null(input$filter_sexo) | !is.null(input$filter_idade) |
+                !is.null(input$filter_morte) | !is.null(input$filter_crime)
                ){
                   
-                  tb_legend <- mcz@data %>%
-                        left_join(tb_stats) %>% 
-                        filter(value == "Total") %>% 
-                        # dplyr::mutate(n = ifelse(is.na(n), 0, n)) %>% 
-                        distinct(bairro, .keep_all = T)
+                  # tb_legend <- mcz@data %>%
+                  #       left_join(tb_stats) %>% 
+                  #       filter(value == "Total") %>% 
+                  #       # dplyr::mutate(n = ifelse(is.na(n), 0, n)) %>% 
+                  #       distinct(bairro, .keep_all = T)
                   
                   mcz@data <- mcz@data %>% 
                         dplyr::left_join(df_mapa_final()) %>%
@@ -411,7 +469,7 @@ server <- shinyServer(function(input, output, session) {
                   #                  bins = 5)
                   
                   pall <- colorBin("YlOrRd", domain = mcz@data$n,
-                                   bins = c(0, 2, 3, 5, 11, 30, 70))
+                                   bins = c(0, 2, 3, 5, 11, 30, 320))
                   
                   labels <- sprintf(
                         "<b>Bairro:</b> %s <br>
@@ -534,6 +592,21 @@ server <- shinyServer(function(input, output, session) {
                   # dySeries(color = "grey40") %>% 
                   dyRangeSelector(.)
 })
+      
+      observeEvent(input$reset_input, {
+            
+            # mcz@data <- mcz@data %>%
+            #       dplyr::left_join(df_mapa_total()) %>%
+            #       mutate(n = ifelse(is.na(n), 0, n))
+            
+            leafletProxy("mapa_mcz") %>%
+                  setView(lng = -35.74, lat = -9.62, zoom = 12) %>% 
+                  addProviderTiles(provider = "CartoDB.DarkMatter", 
+                                   group = "Dark",
+                                   options = providerTileOptions(minZoom = 12, maxZoom = 15)) %>% 
+                  clearMarkers()
+                  
+      })
 
 output$plot_hora <- renderChart({
       
