@@ -1,5 +1,4 @@
 ## Carrega pacotes ------------------------
-library(pdftables)
 library(stringr)
 library(tidyverse)
 library(janitor)
@@ -21,62 +20,15 @@ library(rCharts)
 library(leaflet) 
 library(shinyjs)
 
-
-# pacman::p_load(pdftables, stringr, tidyverse, janitor, maptools, rgdal,
-#                rgeos, scales, sp, shiny, plotly, shinythemes, 
-#                markdown, dygraphs, shinydashboard, zoo, xts, rCharts, leaflet, shinyjs)
-
 ## Carrega dados --------------------------
-# setwd("H:/violencia")
-# setwd("E:/violencia")
-# setwd("D:/Users/B31099033/Documents/violencia")
-# mcz <- readOGR(dsn = ".", layer = "shp", stringsAsFactors = FALSE)
-# df <- readRDS("C:/Users/ahpvi/Documents/shiny/violencia/tb-cvli-al-2017.rds")
-# load("C:/Users/ahpvi/Documents/shiny/violence_monitor/data/labels.Rdata")
 load("./data/labels.Rdata")
 
 ## Modifica dados -------------------------
 
-# df <- dplyr::mutate(df, sexo = ifelse(is.na(sexo), "Sem informação", sexo))
-# df <- dplyr::mutate(df, faixa_idade = ifelse(faixa_idade == "Sem informações", "Sem informação", faixa_idade))
-# df <- dplyr::mutate(df, tipo_morte = ifelse(tipo_morte == "Sem informações", "Sem informação", tipo_morte))
-# df <- dplyr::mutate(df,
-#                     data_fato = na.locf(data_fato),
-#                     mes_fato = str_sub(data_fato, 4, 5),
-#                     data_fato = as.Date(data_fato, "%d/%m/%Y"),
-#                     mes_ano = as.yearmon(str_sub(data_fato, 1, 7)))
-# 
-# tb_bairro <- df %>%
-#       filter(cidade == "Maceió") %>%
-#       mutate(bairro = iconv(bairro, "latin1", "latin1")) %>%
-#       group_by(bairro) %>%
-#       dplyr::summarize(n_cvli = n())
-# 
-# bairros <- pull(distinct(select(tb_bairro, bairro)))
-# sexo <- pull(distinct(select(df, sexo)))
-# faixa_idade <- pull(distinct(select(df, faixa_idade)))
-# tipo_morte <- pull(distinct(select(df, tipo_morte)))
-# tipo_crime <- pull(distinct(select(df, subjetividade_complementar)))
-# tipo_crime[is.na(tipo_crime)] <- "Sem informação"
-# save(bairros, sexo, faixa_idade, tipo_morte, tipo_crime, 
-#      file = "C:/Users/ahpvi/Documents/shiny/violencia/labels.Rdata")
-# 
-# # quantile(tb_bairro$n_cvli, probs = seq(0, 1, by = .20))
-# 
-# mcz@data <- mutate(mcz@data, Bairro = iconv(Bairro, from = "UTF-8", to = "latin1"))
-# mcz@data <- mcz@data %>%
-#       # tabyl(Bairro)
-#       left_join(tb_bairro, by = c("Bairro" = "bairro"))
-# 
-# mcz@data <- mcz@data %>%
-#       mutate(faixa_cvli = cut(
-#             n_cvli, breaks = c(quantile(n_cvli, probs = seq(0, 1, by = .2), na.rm = T)),
-#             labels = c("1-2", "2-3", "3-5", "5-11", "11-30")))
 
 includeMarkdown <- function (path) 
 {
       html <- markdown::markdownToHTML(path, fragment.only = TRUE)
-      # Encoding(html) <- "UTF-8"
       return(HTML(html))
 }
 
@@ -125,7 +77,6 @@ sidebar <- dashboardSidebar(width = 250,
       radioButtons("filter_indicador", 
                    "Indicador (em construção)",
                    choices = c("Número total", "Taxa por 10 mil habitantes"), 
-                   # inline = T, 
                    width = "100%")),
       actionButton("reset_input", "Limpar filtro", 
                    width = "50%", 
@@ -133,14 +84,13 @@ sidebar <- dashboardSidebar(width = 250,
 )
 
 body <- dashboardBody(
-      # includeCSS("C:/Users/ahpvi/Documents/shiny/violence_monitor/www/custom.css"),
       includeCSS("./www/custom.css"),
       useShinyjs(),
-      tags$head(tags$style(
-            HTML('
-                 label, button, select {
-                 color: white;
-                 }'))),
+      # tags$head(tags$style(
+      #       HTML('
+      #            label, button, select {
+      #            color: white;
+      #            }'))),
       theme = shinytheme("slate"),
       title = " ", #footer=source("intro_foot.R", local=TRUE)$value, 
       windowTitle = "Monitor do crime", collapsible = TRUE, fluid = FALSE,
@@ -194,7 +144,7 @@ body <- dashboardBody(
             br(),
             fluidRow(
                   column(width = 8, 
-                         includeMarkdown("./credit_app.md"))
+                         includeMarkdown("credit_app.md"))
             )
       )
 )

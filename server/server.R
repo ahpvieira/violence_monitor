@@ -1,9 +1,4 @@
-## ACERTAR FILTROS REATIVOS DO MAPA
-      # Paleta de cores bagunça quando o usuario filtra
-      # Erro nos filtros depois de sexo
-
 ## Carrega pacotes ------------------------
-library(pdftables)
 library(stringr)
 library(tidyverse)
 library(janitor)
@@ -26,34 +21,41 @@ library(leaflet)
 library(shinyjs)
 library(reshape2)
 
-# pacman::p_load(pdftables, stringr, tidyverse, janitor, maptools, rgdal,
-#                rgeos, scales, sp, shiny, plotly, shinythemes, htmlwidgets,
-#              markdown, dygraphs, shinydashboard, zoo, xts, rCharts, leaflet, shinyjs)
+# Carrega dados
+mcz <- readOGR(dsn = "./data", 
+               layer = "shp", stringsAsFactors = FALSE)
+# df <- readRDS("./data/tb-cvli-al-2017.rds")
+df <- read_csv2("./data/tb-cvli-al-2017.csv")
+# write_csv2(df, "./data/tb-cvli-al-2017.csv")
 
-# devtools::install_github('rCharts', 'ramnathv')
+
+# Modifica dados
+df <- dplyr::mutate(df, sexo = ifelse(is.na(sexo), "Sem informação", sexo))
+df <- dplyr::mutate(df, faixa_idade = ifelse(faixa_idade == "Sem informações", "Sem informação", faixa_idade))
+df <- dplyr::mutate(df, tipo_morte = ifelse(tipo_morte == "Sem informações", "Sem informação", tipo_morte))
+df <- dplyr::mutate(df,
+                    data_fato = na.locf(data_fato),
+                    mes_fato = str_sub(data_fato, 4, 5),
+                    data_fato = as.Date(data_fato, "%d/%m/%Y"),
+                    mes_ano = as.yearmon(str_sub(data_fato, 1, 7))) %>% 
+      dplyr::select(bairro, sexo, faixa_idade, tipo_crime = subjetividade_complementar, 
+                    tipo_morte, mes_fato, data_fato) %>% 
+      dplyr::mutate(bairro = iconv(bairro, "UTF-8", "ASCII//TRANSLIT"),
+                    bairro = ifelse(bairro == "Centro", "Centro Maceio", bairro))
+
+names(mcz@data)[2] <- "populacao" 
+
+mcz@data <- mcz@data %>% 
+      janitor::clean_names %>% 
+      dplyr::rename(pop_total = populacao) %>%
+      dplyr::mutate(pop_total = as.numeric(pop_total)) %>% 
+      dplyr::mutate(bairro = iconv(bairro, "UTF-8", "ASCII//TRANSLIT")) %>% 
+      dplyr::select(bairro, pop_total)
+
 
 ## Server ---------------------------------
 
 server <- shinyServer(function(input, output, session) {
-      
-      # Carrega dados
-      mcz <- readOGR(dsn = "./data", 
-                     layer = "shp", stringsAsFactors = FALSE)
-      df <- readRDS("./data/tb-cvli-al-2017.rds")
-      
-      # Modifica dados
-      df <- dplyr::mutate(df, sexo = ifelse(is.na(sexo), "Sem informação", sexo))
-      df <- dplyr::mutate(df, faixa_idade = ifelse(faixa_idade == "Sem informações", "Sem informação", faixa_idade))
-      df <- dplyr::mutate(df, tipo_morte = ifelse(tipo_morte == "Sem informações", "Sem informação", tipo_morte))
-      df <- dplyr::mutate(df,
-                          data_fato = na.locf(data_fato),
-                          mes_fato = str_sub(data_fato, 4, 5),
-                          data_fato = as.Date(data_fato, "%d/%m/%Y"),
-                          mes_ano = as.yearmon(str_sub(data_fato, 1, 7))) %>% 
-            dplyr::select(bairro, sexo, faixa_idade, tipo_crime = subjetividade_complementar, 
-                          tipo_morte, mes_fato, data_fato) %>% 
-            dplyr::mutate(bairro = iconv(bairro, "UTF-8", "ASCII//TRANSLIT"),
-                          bairro = ifelse(bairro == "Centro", "Centro Maceio", bairro))
       
       # tb1 <- df %>% 
       #       tbl_df %>% 
@@ -151,7 +153,7 @@ server <- shinyServer(function(input, output, session) {
             if (is.null(input$filter_idade)){
                   return(df_mapa_sexo())
                   }
-            else if (!input$filter_idade == ""){
+            else if (!is.null(input$filter_idade)){
                   # df_mapa_sexo() %>% dplyr::filter(value == input$filter_idade)
                   # dplyr::filter(df_mapa_sexo(), value %in% input$filter_idade)
                   dplyr::filter(df_mapa_sexo(), faixa_idade %in% input$filter_idade)
@@ -209,17 +211,6 @@ server <- shinyServer(function(input, output, session) {
                   
                   })
       
-      mcz@data <- mcz@data %>% 
-            clean_names %>% 
-            rename(pop_total = populaã_ã) %>%
-            mutate(pop_total = as.numeric(pop_total)) %>% 
-            # dplyr::mutate(bairro = iconv(bairro, "UTF-8", "latin1")) %>% 
-            dplyr::mutate(bairro = iconv(bairro, "UTF-8", "ASCII//TRANSLIT")) %>% 
-            # dplyr::mutate(pop_total = format(round(as.numeric(popula_a_a), 1), 
-            #                                 nsmall = 0, big.mark = "\\.")) %>% 
-            select(bairro, pop_total)
-            
-      
       # mcz@data <- mcz@data %>% 
       #       mutate(faixa_cvli = cut(n_cvli, 
       #                               breaks = c(quantile(n_cvli, probs = seq(0, 1, by = .2), na.rm = T)),
@@ -254,7 +245,7 @@ server <- shinyServer(function(input, output, session) {
             if (is.null(input$filter_idade)){
                   return(df_sexo())
             }
-            else if (!input$filter_idade == ""){
+            else if (!is.null(input$filter_idade)){
                   df_sexo() %>% filter(faixa_idade %in% input$filter_idade)}
             
       })
@@ -575,7 +566,7 @@ server <- shinyServer(function(input, output, session) {
             shiny::validate(need(nrow(df_reactive()) > 0, message = "Seu filtro não retornou resultados."))
             
             df_reactive() %>%
-                  # df %>% 
+                  # df %>%
                   # filter(bairro == "Benedito Bentes") %>% 
                   # filter(sexo == "Feminino") %>% 
                   filter(!mes_fato == "rr", !is.na(mes_fato), mes_fato > 0) %>%
@@ -583,10 +574,11 @@ server <- shinyServer(function(input, output, session) {
                   dplyr::summarize(n = n()) %>%
                   dplyr::rename(Quantidade = n,
                                 Data = data_fato) %>%
+                  # data.frame
                   xts(., order.by = .$Data, frequency = .$Quantidade) %>%
                   dygraph(., main = "", ylab = "Número de ocorrências") %>% 
-                  dyShading(from = 2.64, 
-                            to = 8.46, axis = "y") %>% 
+                  # dyShading(from = 2.64, 
+                  #           to = 8.46, axis = "y") %>% 
                   # dyShading(from = "2017-1-1", to = "2017-9-1", color = "grey20") %>% 
                   dyOptions(drawPoints = TRUE, pointSize = 4, colors = "grey40") %>% 
                   # dySeries(color = "grey40") %>% 
@@ -608,45 +600,45 @@ server <- shinyServer(function(input, output, session) {
                   
       })
 
-output$plot_hora <- renderChart({
-      
-      # if (is.null(df_reactive())) return(rCharts$new())
-  
-      shiny::validate(need(nrow(df_reactive()) > 0, message = "Seu filtro não retornou resultados."))
-  
-      tb_hora <- df_reactive() %>% 
-            mutate(hora = as.numeric(hora)) %>%
-            group_by(hora) %>% 
-            dplyr::summarize(n = n()) %>% 
-            arrange(hora) %>% 
-            filter(!is.na(hora)) %>% 
-            dplyr::rename(Quantidade = n,
-                          `Hora` = hora)
-      
-      chart_width <- 0.95*as.numeric(htmlwidgets::JS("window.innerWidth"))
-      
-      plot <- nPlot(
-            Quantidade ~ Hora,
-            # group = "tx_sigla_uf",
-            data = tb_hora,
-            type = "lineChart",
-            dom = "plot_hora"
-            # width = session$clientData[["output_plot1_width"]]
-            # width = session$clientData[["output_plot1_width"]]
-      )
-      
-      # plot$params$width <- 600
-      plot$params$height <- 400
-      
-      # plot <- xPlot(n ~ hora, data = tb_hora, type = "line-dotted")
-      # # plot$print("chart2")
-      # plot$print("chart2")
-      # plot
-      
-      plot$yAxis(axisLabel = "Número de ocorrências", width = 50)
-      plot$xAxis(axisLabel = "Hora", width = 70)
-      plot$chart(color = "#! function(d){ return 'black'} !#")
-      plot
-      
-})
+# output$plot_hora <- renderChart({
+#       
+#       # if (is.null(df_reactive())) return(rCharts$new())
+#   
+#       shiny::validate(need(nrow(df_reactive()) > 0, message = "Seu filtro não retornou resultados."))
+#   
+#       tb_hora <- df_reactive() %>% 
+#             mutate(hora = as.numeric(hora)) %>%
+#             group_by(hora) %>% 
+#             dplyr::summarize(n = n()) %>% 
+#             arrange(hora) %>% 
+#             filter(!is.na(hora)) %>% 
+#             dplyr::rename(Quantidade = n,
+#                           `Hora` = hora)
+#       
+#       chart_width <- 0.95*as.numeric(htmlwidgets::JS("window.innerWidth"))
+#       
+#       plot <- nPlot(
+#             Quantidade ~ Hora,
+#             # group = "tx_sigla_uf",
+#             data = tb_hora,
+#             type = "lineChart",
+#             dom = "plot_hora"
+#             # width = session$clientData[["output_plot1_width"]]
+#             # width = session$clientData[["output_plot1_width"]]
+#       )
+#       
+#       # plot$params$width <- 600
+#       plot$params$height <- 400
+#       
+#       # plot <- xPlot(n ~ hora, data = tb_hora, type = "line-dotted")
+#       # # plot$print("chart2")
+#       # plot$print("chart2")
+#       # plot
+#       
+#       plot$yAxis(axisLabel = "Número de ocorrências", width = 50)
+#       plot$xAxis(axisLabel = "Hora", width = 70)
+#       plot$chart(color = "#! function(d){ return 'black'} !#")
+#       plot
+#       
+# })
 })
